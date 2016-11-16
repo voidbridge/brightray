@@ -104,6 +104,23 @@ URLRequestContextGetter::Delegate::CreateCertVerifier() {
   return net::CertVerifier::CreateDefault();
 }
 
+std::unique_ptr<net::HostResolver>
+URLRequestContextGetter::Delegate::CreateHostResolver() {
+  std::unique_ptr<net::HostResolver> host_resolver(net::HostResolver::CreateDefaultResolver(nullptr));
+
+  // --host-resolver-rules
+  auto& command_line = *base::CommandLine::ForCurrentProcess();
+  if (command_line.HasSwitch(::switches::kHostResolverRules)) {
+    std::unique_ptr<net::MappedHostResolver> remapped_resolver(
+        new net::MappedHostResolver(std::move(host_resolver)));
+    remapped_resolver->SetRulesFromString(
+        command_line.GetSwitchValueASCII(::switches::kHostResolverRules));
+    host_resolver = std::move(remapped_resolver);
+  }
+
+  return host_resolver;
+}
+
 net::SSLConfigService* URLRequestContextGetter::Delegate::CreateSSLConfigService() {
   return new net::SSLConfigServiceDefaults;
 }
@@ -200,16 +217,8 @@ net::URLRequestContext* URLRequestContextGetter::GetURLRequestContext() {
             net::HttpUtil::GenerateAcceptLanguageHeader(accept_lang),
             user_agent_)));
 
-    std::unique_ptr<net::HostResolver> host_resolver(net::HostResolver::CreateDefaultResolver(nullptr));
-
-    // --host-resolver-rules
-    if (command_line.HasSwitch(::switches::kHostResolverRules)) {
-      std::unique_ptr<net::MappedHostResolver> remapped_resolver(
-          new net::MappedHostResolver(std::move(host_resolver)));
-      remapped_resolver->SetRulesFromString(
-          command_line.GetSwitchValueASCII(::switches::kHostResolverRules));
-      host_resolver = std::move(remapped_resolver);
-    }
+    std::unique_ptr<net::HostResolver> host_resolver =
+        delegate_->CreateHostResolver();
 
     // --proxy-server
     net::DhcpProxyScriptFetcherFactory dhcp_factory;

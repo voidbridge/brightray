@@ -51,6 +51,7 @@ class URLRequestContextGetter : public net::URLRequestContextGetter {
     virtual net::HttpCache::BackendFactory* CreateHttpCacheBackendFactory(
         const base::FilePath& base_path);
     virtual std::unique_ptr<net::CertVerifier> CreateCertVerifier();
+    virtual std::unique_ptr<net::HostResolver> CreateHostResolver();
     virtual net::SSLConfigService* CreateSSLConfigService();
     virtual std::vector<std::string> GetCookieableSchemes();
     virtual net::TransportSecurityState::RequireCTDelegate*
